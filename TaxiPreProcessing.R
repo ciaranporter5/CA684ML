@@ -48,24 +48,34 @@ TaxiPickupSummary$TaxiSplit = sample.split(
 TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
 TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
 
+# write function that scales data to 0-1 range
+minMaxScaling <- function(original, max, min){
+  (original - min)/(max - min)
+}
+
+# write function to bring back to original for comparing outputs
+minMaxDescaling <- function(scaled, max, min){
+  ((scaled*(max-min)) + min)
+}
+
 # scale the continuous variables in the training dataset (values between 0-1)
-TaxiTrain$Num_Jrnys_Scaled <- (TaxiTrain$Num_Jrnys - min(TaxiTrain$Num_Jrnys))/
-  (max(TaxiTrain$Num_Jrnys) - min(TaxiTrain$Num_Jrnys))
+TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, max(TaxiTrain$Num_Jrnys),
+                                            min(TaxiTrain$Num_Jrnys))
 
-TaxiTrain$total_passenger_count_Scaled <- 
-  (TaxiTrain$total_passenger_count -min(TaxiTrain$total_passenger_count))/
-  (max(TaxiTrain$total_passenger_count) - min(TaxiTrain$total_passenger_count))
+TaxiTrain$total_passenger_count_Scaled <- minMaxScaling(TaxiTrain$total_passenger_count,
+                                                        max(TaxiTrain$total_passenger_count),
+                                                        min(TaxiTrain$total_passenger_count))
 
-TaxiTrain$total_fare_Scaled <- (TaxiTrain$total_fare - min(TaxiTrain$total_fare))/
-  (max(TaxiTrain$total_fare) - min(TaxiTrain$total_fare))
+TaxiTrain$total_fare_Scaled <- minMaxScaling(TaxiTrain$total_fare, max(TaxiTrain$total_fare),
+                                            min(TaxiTrain$total_fare))
 
 # scale the continuous variables in the test dataset (values between 0-1)
-TaxiTest$Num_Jrnys_Scaled <- (TaxiTest$Num_Jrnys - min(TaxiTest$Num_Jrnys))/
-  (max(TaxiTest$Num_Jrnys) - min(TaxiTest$Num_Jrnys))
+TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, max(TaxiTest$Num_Jrnys),
+                                            min(TaxiTest$Num_Jrnys))
 
-TaxiTest$total_passenger_count_Scaled <- 
-  (TaxiTest$total_passenger_count -min(TaxiTest$total_passenger_count))/
-  (max(TaxiTest$total_passenger_count) - min(TaxiTest$total_passenger_count))
+TaxiTest$total_passenger_count_Scaled <- minMaxScaling(TaxiTest$total_passenger_count,
+                                                        max(TaxiTest$total_passenger_count),
+                                                        min(TaxiTest$total_passenger_count))
 
-TaxiTest$total_fare_Scaled <- (TaxiTest$total_fare - min(TaxiTest$total_fare))/
-  (max(TaxiTest$total_fare) - min(TaxiTest$total_fare))
+TaxiTest$total_fare_Scaled <- minMaxScaling(TaxiTest$total_fare, max(TaxiTest$total_fare),
+                                             min(TaxiTest$total_fare))
