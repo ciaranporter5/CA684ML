@@ -1,14 +1,18 @@
-library(geohash)
-library(leaflet)
+#install.packages("data.table")
+#install.packages("plyr")
+#install.packages("caret")
+#install.packages("caTools")
 library(data.table)
 library(plyr)
 library(caret)
 library(caTools)
 
 # read-in taxi data
-TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized_Pickup.csv")
-TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "NULL",]
-head(TaxiPickupSummary)
+TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized_Pickupv2.csv")
+
+# remove blank geohashes - bad records/outside test range
+TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
+head(TaxiPickupSummary,1)
 
 # assign value to categorical variables based on month bin
 for (currentMonth in unique(TaxiPickupSummary$Month)){
@@ -35,15 +39,33 @@ for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
   }
 }
 
-# assign value to categorical variables for payment types
-# TaxiModel$CreditCard <- 0
-# TaxiModel$Cash <- 0
-# TaxiModel$NoCharge <- 0
-# TaxiModel$Dispute <- 0
-# TaxiModel$Unknown <- 0
-# 
-# TaxiModel[TaxiModel$payment_type == 1, "CreditCard"] <- 1
-# TaxiModel[TaxiModel$payment_type == 2, "Cash"] <- 1
-# TaxiModel[TaxiModel$payment_type == 3, "NoCharge"] <- 1
-# TaxiModel[TaxiModel$payment_type == 4, "Dispute"] <- 1
-# TaxiModel[TaxiModel$payment_type == 5, "Unknown"] <- 1
+# Set seed so that same training/test set is used on each run
+set.seed(1)
+
+# Split into training and test data based off of split Boolean Vector
+TaxiPickupSummary$TaxiSplit = sample.split(
+  TaxiPickupSummary$Num_Jrnys, SplitRatio = 0.70)
+TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
+TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
+
+# scale the continuous variables in the training dataset (values between 0-1)
+TaxiTrain$Num_Jrnys_Scaled <- (TaxiTrain$Num_Jrnys - min(TaxiTrain$Num_Jrnys))/
+  (max(TaxiTrain$Num_Jrnys) - min(TaxiTrain$Num_Jrnys))
+
+TaxiTrain$total_passenger_count_Scaled <- 
+  (TaxiTrain$total_passenger_count -min(TaxiTrain$total_passenger_count))/
+  (max(TaxiTrain$total_passenger_count) - min(TaxiTrain$total_passenger_count))
+
+TaxiTrain$total_fare_Scaled <- (TaxiTrain$total_fare - min(TaxiTrain$total_fare))/
+  (max(TaxiTrain$total_fare) - min(TaxiTrain$total_fare))
+
+# scale the continuous variables in the test dataset (values between 0-1)
+TaxiTest$Num_Jrnys_Scaled <- (TaxiTest$Num_Jrnys - min(TaxiTest$Num_Jrnys))/
+  (max(TaxiTest$Num_Jrnys) - min(TaxiTest$Num_Jrnys))
+
+TaxiTest$total_passenger_count_Scaled <- 
+  (TaxiTest$total_passenger_count -min(TaxiTest$total_passenger_count))/
+  (max(TaxiTest$total_passenger_count) - min(TaxiTest$total_passenger_count))
+
+TaxiTest$total_fare_Scaled <- (TaxiTest$total_fare - min(TaxiTest$total_fare))/
+  (max(TaxiTest$total_fare) - min(TaxiTest$total_fare))
