@@ -8,7 +8,7 @@ library(caret)
 library(caTools)
 
 # read-in taxi data
-TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized_Pickupv2.csv")
+TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_v3.csv")
 
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
