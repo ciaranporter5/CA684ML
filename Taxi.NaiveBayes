@@ -39,14 +39,14 @@ TaxiPickupSummary$Num_Jrns_binned <- cut2(TaxiPickupSummary$Num_Jrnys, g= 5, lev
 #delete redundent columns from table
 #TaxiTrain[,pickupDate:=NULL]
 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiTrain))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiTrain))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiTrain))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiTrain))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiTrain))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiTrain))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiTrain))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiTrain))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiPickupSummary))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiPickupSummary))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiPickupSummary))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiPickupSummary))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiPickupSummary))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiPickupSummary))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiPickupSummary))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiPickupSummary))]
 
 # Split into training and test data based off of split Boolean Vector
 TaxiPickupSummary$TaxiSplit = sample.split(
