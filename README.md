@@ -5,9 +5,13 @@ List of All Source Code Used as part of Project
 
 
 SQL Scripts
+
 -- Combine 6 months of data
--- Join in geohashes
+
+--Join in geohashes
+
 -- Summarise by geohash
+
 -- Join in weather data
 
 R Scripts
