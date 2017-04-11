@@ -1,10 +1,12 @@
-#install.packages("e1071")
-#install.packages("caTools")
-#install.packages("Hmisc")
+
+install.packages("e1071")
+install.packages("caTools")
+install.packages("Hmisc")
 library("e1071")
 library("caTools")
 library("Hmisc")
 
+setwd("C:/Users/Maeve/Documents/MCM/ML_Test")
 #read in taxi data
 TaxiPickupSummary <- read.csv("Taxi_Summarized by pickup location_v3.CSV")
 
@@ -34,28 +36,36 @@ for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
 }
 
 #assign each record to a bin of equal frequency for the number of journeys
-TaxiPickupSummary$Num_Jrns_binned <- cut2(TaxiPickupSummary$Num_Jrnys, g= 5, levels.mean = TRUE)
+#TaxiPickupSummary$Num_Jrns_binned <- cut2(TaxiPickupSummary$Num_Jrnys, g= 5, levels.mean = TRUE)
 
-#delete redundent columns from table
-#TaxiTrain[,pickupDate:=NULL]
-
-TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiPickupSummary))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiPickupSummary))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiPickupSummary))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiPickupSummary))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiPickupSummary))] 
-TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiPickupSummary))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiPickupSummary))]
-TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiPickupSummary))]
-
-# Split into training and test data based off of split Boolean Vector
-TaxiPickupSummary$TaxiSplit = sample.split(
-  TaxiPickupSummary$Num_Jrnys, SplitRatio = 0.70)
-TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
-TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
-
-#Train data using Naiive Bayes. ~. means that all fields apart from Num_Jrns_binned are used as features.
-taxi_model <- naiveBayes(Num_Jrns_binned~., data = TaxiTrain)
-
-#test model on test dataset
-taxi_model_predict <- predict(taxi_model,TaxiTest[,-1])
+ApplyQuintiles <- function(x) {
+  cut(x, breaks=c(quantile(TaxiPickupSummary$Num_Jrnys, probs = seq(0, 1, by = 0.25))), 
+      labels=c("low","medium","high","very high"), include.lowest=TRUE)}
+  
+  TaxiPickupSummary$Pickup_Level <- sapply(TaxiPickupSummary$Num_Jrnys, ApplyQuintiles)
+  
+  head(TaxiPickupSummary,1)
+  #delete redundent columns from table
+  
+  
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiPickupSummary))] 
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiPickupSummary))] 
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiPickupSummary))]
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiPickupSummary))] 
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiPickupSummary))] 
+  #TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiPickupSummary))]
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiPickupSummary))]
+  TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiPickupSummary))]
+  
+  # Split into training and test data based off of split Boolean Vector
+  TaxiPickupSummary$TaxiSplit = sample.split(
+    TaxiPickupSummary$Num_Jrnys, SplitRatio = 0.70)
+  TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
+  TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
+  
+  
+  taxi_model <- naiveBayes(Num_Jrns_binned~., data = TaxiTrain)
+  
+  taxi_model_predict <- predict(taxi_model,TaxiTest[,-1])
+  
+  view(TaxiTest)
