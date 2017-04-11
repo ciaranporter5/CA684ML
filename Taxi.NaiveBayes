@@ -1,0 +1,61 @@
+#install.packages("e1071")
+#install.packages("caTools")
+#install.packages("Hmisc")
+library("e1071")
+library("caTools")
+library("Hmisc")
+
+#read in taxi data
+TaxiPickupSummary <- read.csv("Taxi_Summarized by pickup location_v3.CSV")
+
+# remove blank geohashes - bad records/outside test range
+TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
+
+# assign value to categorical variables based on month bin
+for (currentMonth in unique(TaxiPickupSummary$Month)){
+  if (currentMonth != "June"){
+    TaxiPickupSummary[currentMonth] <- 
+      ifelse(TaxiPickupSummary$Month==currentMonth,1,0)
+  }
+}
+
+for (day in unique(TaxiPickupSummary$Week_Day)){
+  if (day != "Sunday"){
+    TaxiPickupSummary[day] <- ifelse(TaxiPickupSummary$Week_Day==day,1,0)
+  }
+}
+
+# assign value to categorical variables based on time period bin
+for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
+  if (as.character(timePeriod) != "00:00"){
+    TaxiPickupSummary[as.character(timePeriod)] <- 
+      ifelse(TaxiPickupSummary$TimeInterval==timePeriod,1,0)
+  }
+}
+
+#assign each record to a bin of equal frequency for the number of journeys
+TaxiPickupSummary$Num_Jrns_binned <- cut2(TaxiPickupSummary$Num_Jrnys, g= 5, levels.mean = TRUE)
+
+#delete redundent columns from table
+#TaxiTrain[,pickupDate:=NULL]
+
+TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiTrain))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiTrain))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiTrain))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiTrain))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiTrain))] 
+TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiTrain))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiTrain))]
+TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiTrain))]
+
+# Split into training and test data based off of split Boolean Vector
+TaxiPickupSummary$TaxiSplit = sample.split(
+  TaxiPickupSummary$Num_Jrnys, SplitRatio = 0.70)
+TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
+TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
+
+#Train data using Naiive Bayes. ~. means that all fields apart from Num_Jrns_binned are used as features.
+taxi_model <- naiveBayes(Num_Jrns_binned~., data = TaxiTrain)
+
+#test model on test dataset
+taxi_model_predict <- predict(taxi_model,TaxiTest[,-1])
