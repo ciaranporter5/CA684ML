@@ -2,10 +2,12 @@
 #install.packages("plyr")
 #install.packages("caret")
 #install.packages("caTools")
+#install.pacakges("geohash")
 library(data.table)
 library(plyr)
 library(caret)
 library(caTools)
+library(geohash)
 
 # read-in taxi data
 TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_v3.csv")
@@ -24,7 +26,6 @@ for (currentMonth in unique(TaxiPickupSummary$Month)){
 
 # set up binary variables for days for the week.
 # Note that there are 6 variables. Sunday is assumed to be where all 6 equal 0
-
 for (day in unique(TaxiPickupSummary$Week_Day)){
   if (day != "Sunday"){
     TaxiPickupSummary[day] <- ifelse(TaxiPickupSummary$Week_Day==day,1,0)
@@ -43,10 +44,10 @@ for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
 set.seed(1)
 
 # Split into training and test data based off of split Boolean Vector
-TaxiPickupSummary$TaxiSplit = sample.split(
+TaxiPickupSummary$TaxiSplit <- sample.split(
   TaxiPickupSummary$Num_Jrnys, SplitRatio = 0.70)
-TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
-TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
+TaxiTrain <- subset(TaxiPickupSummary, TaxiSplit == TRUE)
+TaxiTest <- subset(TaxiPickupSummary, TaxiSplit == FALSE)
 
 # write function that scales data to 0-1 range
 minMaxScaling <- function(original, max, min){
@@ -58,24 +59,18 @@ minMaxDescaling <- function(scaled, max, min){
   ((scaled*(max-min)) + min)
 }
 
-# scale the continuous variables in the training dataset (values between 0-1)
+# scale the number of journeys in the training dataset (values between 0-1)
 TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, max(TaxiTrain$Num_Jrnys),
                                             min(TaxiTrain$Num_Jrnys))
 
-TaxiTrain$total_passenger_count_Scaled <- minMaxScaling(TaxiTrain$total_passenger_count,
-                                                        max(TaxiTrain$total_passenger_count),
-                                                        min(TaxiTrain$total_passenger_count))
-
-TaxiTrain$total_fare_Scaled <- minMaxScaling(TaxiTrain$total_fare, max(TaxiTrain$total_fare),
-                                            min(TaxiTrain$total_fare))
-
-# scale the continuous variables in the test dataset (values between 0-1)
+# scale the number of journeys in the test dataset (values between 0-1)
 TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, max(TaxiTest$Num_Jrnys),
                                             min(TaxiTest$Num_Jrnys))
 
-TaxiTest$total_passenger_count_Scaled <- minMaxScaling(TaxiTest$total_passenger_count,
-                                                        max(TaxiTest$total_passenger_count),
-                                                        min(TaxiTest$total_passenger_count))
+# include in latitude and longitude information relevative to the geohashes
+TaxiTrain$ReversedLat <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lat
+TaxiTrain$ReversedLong <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lng
+TaxiTest$ReversedLat <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lat
+TaxiTest$ReversedLong <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lng
 
-TaxiTest$total_fare_Scaled <- minMaxScaling(TaxiTest$total_fare, max(TaxiTest$total_fare),
-                                             min(TaxiTest$total_fare))
+
