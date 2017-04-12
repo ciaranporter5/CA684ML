@@ -1,7 +1,7 @@
 
-install.packages("e1071")
-install.packages("caTools")
-install.packages("Hmisc")
+#install.packages("e1071")
+#install.packages("caTools")
+#install.packages("Hmisc")
 library("e1071")
 library("caTools")
 library("Hmisc")
@@ -13,47 +13,14 @@ TaxiPickupSummary <- read.csv("Taxi_Summarized by pickup location_v3.CSV")
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
 
-# assign value to categorical variables based on month bin
-for (currentMonth in unique(TaxiPickupSummary$Month)){
-  if (currentMonth != "June"){
-    TaxiPickupSummary[currentMonth] <- 
-      ifelse(TaxiPickupSummary$Month==currentMonth,1,0)
-  }
-}
+# Convert the number of journeys to a categorical variable
+TaxiPickupSummary$pickup_level <- with(TaxiPickupSummary, cut(Num_Jrnys, 
+                                  breaks=unique(quantile(Num_Jrnys, probs=seq(0,1, by=0.25)), na.rm=TRUE), 
+                                  include.lowest=TRUE, labels = c("low","medium","high","very-high")))
 
-for (day in unique(TaxiPickupSummary$Week_Day)){
-  if (day != "Sunday"){
-    TaxiPickupSummary[day] <- ifelse(TaxiPickupSummary$Week_Day==day,1,0)
-  }
-}
-
-# assign value to categorical variables based on time period bin
-for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
-  if (as.character(timePeriod) != "00:00"){
-    TaxiPickupSummary[as.character(timePeriod)] <- 
-      ifelse(TaxiPickupSummary$TimeInterval==timePeriod,1,0)
-  }
-}
-
-#assign each record to a bin of equal frequency for the number of journeys
-#TaxiPickupSummary$Num_Jrns_binned <- cut2(TaxiPickupSummary$Num_Jrnys, g= 5, levels.mean = TRUE)
-
-ApplyQuintiles <- function(x) {
-  cut(x, breaks=c(quantile(TaxiPickupSummary$Num_Jrnys, probs = seq(0, 1, by = 0.25))), 
-      labels=c("low","medium","high","very high"), include.lowest=TRUE)}
-  
-  TaxiPickupSummary$Pickup_Level <- sapply(TaxiPickupSummary$Num_Jrnys, ApplyQuintiles)
-  
-  head(TaxiPickupSummary,1)
   #delete redundent columns from table
-  
-  
   TaxiPickupSummary <- TaxiPickupSummary[-grep('pickupDate', colnames(TaxiPickupSummary))] 
-  TaxiPickupSummary <- TaxiPickupSummary[-grep('Week_Day', colnames(TaxiPickupSummary))] 
-  TaxiPickupSummary <- TaxiPickupSummary[-grep('Month', colnames(TaxiPickupSummary))]
   TaxiPickupSummary <- TaxiPickupSummary[-grep('DAY', colnames(TaxiPickupSummary))] 
-  TaxiPickupSummary <- TaxiPickupSummary[-grep('TimeInterval', colnames(TaxiPickupSummary))] 
-  #TaxiPickupSummary <- TaxiPickupSummary[-grep('Num_Jrnys', colnames(TaxiPickupSummary))]
   TaxiPickupSummary <- TaxiPickupSummary[-grep('total_passenger_count', colnames(TaxiPickupSummary))]
   TaxiPickupSummary <- TaxiPickupSummary[-grep('total_fare', colnames(TaxiPickupSummary))]
   
@@ -63,9 +30,22 @@ ApplyQuintiles <- function(x) {
   TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
   TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
   
+  #delete num jrnys field
+  TaxiTest <- TaxiTest[-grep('Num_Jrnys', colnames(TaxiTest))]
+  TaxiTrain <- TaxiTrain[-grep('Num_Jrnys', colnames(TaxiTrain))]
   
-  taxi_model <- naiveBayes(Num_Jrns_binned~., data = TaxiTrain)
+  #delete taxisplit field
+  TaxiTest <- TaxiTrain[-grep('TaxiSplit', colnames(TaxiTest))]
+  TaxiTrain <- TaxiTrain[-grep('TaxiSplit', colnames(TaxiTrain))]
   
-  taxi_model_predict <- predict(taxi_model,TaxiTest[,-1])
+  #train the model
+  taxi_model <- naiveBayes(pickup_level~., data = TaxiTrain)
   
-  view(TaxiTest)
+  taxi_model_predict <- predict(taxi_model,TaxiTest[,-5])
+  
+  #confusion matrix
+  table(pred=taxi_model_predict,true=TaxiTrain$pickup_level)
+  
+  #fraction of correct predictions
+  mean(taxi_model_predict==TaxiTrain$pickup_level)
+  
