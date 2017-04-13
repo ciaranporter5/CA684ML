@@ -7,10 +7,10 @@ library(data.table)
 library(plyr)
 library(caret)
 library(caTools)
-library(geohash)
+#library(geohash)
 
 # read-in taxi data
-TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_v3.csv")
+TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_w_lags.csv")
 
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
@@ -59,18 +59,54 @@ minMaxDescaling <- function(scaled, max, min){
   ((scaled*(max-min)) + min)
 }
 
-# scale the number of journeys in the training dataset (values between 0-1)
-TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, max(TaxiTrain$Num_Jrnys),
+# scale the number of journeys (including lags) in the training dataset (values between 0-1)
+TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, 
+                                            max(TaxiTrain$Num_Jrnys),
                                             min(TaxiTrain$Num_Jrnys))
 
-# scale the number of journeys in the test dataset (values between 0-1)
-TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, max(TaxiTest$Num_Jrnys),
+TaxiTrain$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Day, 
+                                                    max(TaxiTrain$Num_Jrnys_Prev_Day),
+                                                    min(TaxiTrain$Num_Jrnys_Prev_Day))
+
+TaxiTrain$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Week, 
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Week),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Week))
+
+TaxiTrain$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Hour,
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Hour),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Hour))
+
+TaxiTrain$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_HalfHour,
+                                                          max(TaxiTrain$Num_Jrnys_Prev_HalfHour),
+                                                          min(TaxiTrain$Num_Jrnys_Prev_HalfHour))
+
+# scale the number of journeys (including lags) in the test dataset (values between 0-1)
+TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, 
+                                            max(TaxiTest$Num_Jrnys),
                                             min(TaxiTest$Num_Jrnys))
 
+TaxiTest$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Day, 
+                                                     max(TaxiTest$Num_Jrnys_Prev_Day),
+                                                     min(TaxiTest$Num_Jrnys_Prev_Day))
+
+TaxiTest$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Week, 
+                                                      max(TaxiTest$Num_Jrnys_Prev_Week),
+                                                      min(TaxiTest$Num_Jrnys_Prev_Week))
+
+TaxiTest$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Hour,
+                                                      max(TaxiTest$Num_Jrnys_Prev_Hour),
+                                                      min(TaxiTest$Num_Jrnys_Prev_Hour))
+
+TaxiTest$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_HalfHour,
+                                                          max(TaxiTest$Num_Jrnys_Prev_HalfHour),
+                                                          min(TaxiTest$Num_Jrnys_Prev_HalfHour))
+
+
+
+
+
 # include in latitude and longitude information relevative to the geohashes
-TaxiTrain$ReversedLat <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lat
-TaxiTrain$ReversedLong <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lng
-TaxiTest$ReversedLat <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lat
-TaxiTest$ReversedLong <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lng
-
-
+#TaxiTrain$ReversedLat <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lat
+#TaxiTrain$ReversedLong <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lng
+#TaxiTest$ReversedLat <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lat
+#TaxiTest$ReversedLong <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lng
