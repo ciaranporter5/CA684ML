@@ -14,14 +14,14 @@ library(nnet)
 # Run the neural net on the scaled training dataset
 # check if convergence occurs or need to introduce max iterations
 # Run set seed each time with nnet as will use random inputs each time otherwise
-set.seed(2)
-TaxiNnet <- nnet(TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)], TaxiTrain[69], size =2, 
-                 linout = TRUE)
+set.seed(5)
+TaxiNnet <- nnet(TaxiTrain[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)], TaxiTrain[68], 
+                 size =2, linout = TRUE)
 
 
 # 1. Checks Made on Training Data
 # predict on test data and compare results
-TaxiPredict <- predict(TaxiNnet,TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiPredict <- predict(TaxiNnet,TaxiTrain[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)])
 TaxiPredict_DF<- data.frame(TaxiPredict)
 
 # descale the predictions and show inital outputs
@@ -32,7 +32,7 @@ TaxiPredict_DF$Descaled <- ifelse(minMaxDescaling(TaxiPredict_DF$Num_Jrnys_Scale
                                                   max(TaxiTrain$Num_Jrnys), 
                                                   min(TaxiTrain$Num_Jrnys)),0)
 
-head(data.frame(TaxiTrain$Num_Jrnys, TaxiPredict_DF$Descaled),10)
+head(data.frame(TaxiTrain$Num_Jrnys, TaxiPredict_DF$Descaled),100)
 
 # calculate RMSE on scaled data
 taxi.nn_rmse <- sqrt(mean((TaxiPredict_DF$Descaled-TaxiTrain$Num_Jrnys)^2))
@@ -44,7 +44,7 @@ taxi.nn_mae
 
 # 2. Checks Made on Test Data
 # predict on test data and compare results
-TaxiPredict <- predict(TaxiNnet,TaxiTest[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiPredict <- predict(TaxiNnet,TaxiTest[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)])
 TaxiPredict_DF<- data.frame(TaxiPredict)
 
 # descale the predictions and show inital outputs
@@ -55,7 +55,7 @@ TaxiPredict_DF$Descaled <- ifelse(minMaxDescaling(TaxiPredict_DF$Num_Jrnys_Scale
                                                   max(TaxiTest$Num_Jrnys), 
                                                   min(TaxiTest$Num_Jrnys)),0)
 
-head(data.frame(TaxiTest$Num_Jrnys, TaxiPredict_DF$Descaled),10)
+head(data.frame(TaxiTest$Num_Jrnys, TaxiPredict_DF$Descaled),100)
 
 # calculate RMSE on scaled data
 taxi.nn_rmse <- sqrt(mean((TaxiPredict_DF$Descaled-TaxiTest$Num_Jrnys)^2))
@@ -73,18 +73,18 @@ taxi.nn_predicted <- data.frame(TaxiTest$pickup_Geohash, TaxiTest$pickupDate,
                                   TaxiTest$Num_Jrnys))
 colnames(taxi.nn_predicted) <- c("Geohash","Date", "Time", "Original", 
                                  "Predicted", "Difference", "Perc Diff")
-write.csv(taxi.nn_predicted, file = "TaxiNNPredicted.csv", row.names = FALSE)
+write.csv(taxi.nn_predicted, file = "TaxiNNPredictedv2.csv", row.names = FALSE)
 
 # 3. Test the avNNet
-NumJrnysScaledUnlisted <- unlist(TaxiTrain[69])
-set.seed(2)
-TaxiAvNNet <- avNNet(TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)], NumJrnysScaledUnlisted,
-                     linout = TRUE, size =1, repeats = 10)
+NumJrnysScaledUnlisted <- unlist(TaxiTrain[68])
+set.seed(5)
+TaxiAvNNet <- avNNet(TaxiTrain[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)], 
+                     NumJrnysScaledUnlisted,linout = TRUE, size =1, repeats = 10)
 
 
 # A. Checks Made on Training Data
 # predict on test data and compare results
-TaxiAvNNPredict <- predict(TaxiAvNNet,TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiAvNNPredict <- predict(TaxiAvNNet,TaxiTrain[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)])
 TaxiAvNNPredict_DF<- data.frame(TaxiAvNNPredict)
 
 # descale the predictions and show inital outputs
@@ -107,7 +107,7 @@ taxi.avnn_mae
 
 # B. Checks Made on Test Data
 # predict on test data and compare results
-TaxiAvNNPredict <- predict(TaxiAvNNet,TaxiTest[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiAvNNPredict <- predict(TaxiAvNNet,TaxiTest[-c(1,2,3,5,6,7,8,9,10,11,12,13,67,68)])
 TaxiAvNNPredict_DF<- data.frame(TaxiAvNNPredict)
 
 # descale the predictions and show inital outputs
