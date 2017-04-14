@@ -1,0 +1,85 @@
+#install.packages('randomForest')
+#install.pacakges("geohash")
+#install.packages("caTools")
+
+library(randomForest)
+library(geohash)
+library(caTools)
+
+
+setwd("C:/Users/Maeve/Documents/MCM/ML_Test")
+
+# read-in taxi data
+TaxiPickupSummary <- read.csv("Summarized_inc_weather_Final.csv")
+
+summary(TaxiPickupSummary)
+
+# remove blank geohashes - bad records/outside test range
+TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
+
+#make model reproducible
+set.seed(415)
+
+# Convert the number of journeys to a categorical variable
+TaxiPickupSummary$pickup_level <- with(TaxiPickupSummary, cut(Num_Jrnys, 
+                                                              breaks=unique(quantile(Num_Jrnys, probs=seq(0,1, by=0.25)), na.rm=TRUE), 
+                                                              include.lowest=TRUE, labels = c("low","medium","high","very-high")))
+
+#include in latitude and longitude information relevative to the geohashes
+TaxiPickupSummary$ReversedLat <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lat
+TaxiPickupSummary$ReversedLong <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lng
+
+#Extract the unique lats and longs
+DistinctLat <- unique(TaxiPickupSummary$ReversedLat) 
+DistinctLong <-unique(TaxiPickupSummary$ReversedLong)
+
+#View(DistinctLat)
+#View(DistinctLong)
+
+#check lengths of distinct lats and long to ensure counts are less than 53
+#length(DistinctLat)
+#length(DistinctLong)
+
+#Rank by lat descending and long ascending
+RankedLat <- data.frame(DistinctLat, rank(-DistinctLat))
+colnames(RankedLat)[1] <- "ReversedLat"
+#View(RankedLat)
+RankedLong <- data.frame(DistinctLong, rank(DistinctLong))
+colnames(RankedLong)[1] <- "ReversedLong"
+#View(RankedLong)
+
+#Join back into TaxiPickupSummary table
+TaxiData1 <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
+TaxiData2 <- merge(TaxiData1, RankedLong, by = "ReversedLong")
+colnames(TaxiData2)[31] <- "RankLat"
+colnames(TaxiData2)[32] <- "RankLong"
+
+# Split into training and test data based off of split Boolean Vector
+TaxiData2$TaxiSplit <- sample.split(
+  TaxiData2$Num_Jrnys, SplitRatio = 0.70)
+TaxiTrain <- subset(TaxiData2, TaxiSplit == TRUE)
+TaxiTest <- subset(TaxiData2, TaxiSplit == FALSE)
+
+
+Taxi_fit <- randomForest(as.factor(TaxiTrain$pickup_level) ~ Month + Week_Day + TimeInterval + RankLat + RankLong + Temp + Precip,
+                    data=TaxiTrain, 
+                    importance=TRUE, 
+                    ntree=10)
+
+print(Taxi_fit)
+
+# Importance of each predictor.
+print(importance(Taxi_fit,type = 2)) 
+
+#test predictions
+Taxi_fit_predict <- predict(Taxi_fit,TaxiTest[,-5])
+
+#test predictions
+taxi_model_pred <- predict(Taxi_fit, newdata = TaxiTest)
+table(taxi_model_pred, TaxiTest$pickup_level)
+
+#fraction of correct predictions
+mean(taxi_model_pred==TaxiTest$pickup_level)
+
+
+summary(TaxiTrain$pickup_level)
