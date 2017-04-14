@@ -10,7 +10,7 @@ library(caTools)
 #library(geohash)
 
 # read-in taxi data
-TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_w_lags.csv")
+TaxiPickupSummary <- read.csv("Raw Data/Summarized_inc_weather_Final.csv")
 
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
@@ -39,6 +39,35 @@ for (timePeriod in unique(TaxiPickupSummary$TimeInterval)){
       ifelse(TaxiPickupSummary$TimeInterval==timePeriod,1,0)
   }
 }
+
+# assign value to categorical variables based on conditions bin
+for (currentConditions in unique(TaxiPickupSummary$Conditions)){
+  if (currentConditions != "Clear"){
+    TaxiPickupSummary[currentConditions] <- 
+      ifelse(TaxiPickupSummary$Conditions==currentConditions,1,0)
+  }
+}
+
+#include in latitude and longitude information relevative to the geohashes
+TaxiPickupSummary$ReversedLat <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lat
+TaxiPickupSummary$ReversedLong <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lng
+
+#Extract the unique lats and longs
+DistinctLat <- unique(TaxiPickupSummary$ReversedLat) 
+DistinctLong <-unique(TaxiPickupSummary$ReversedLong)
+
+#Rank by lat descending and long ascending
+RankedLat <- data.frame(DistinctLat, rank(-DistinctLat))
+colnames(RankedLat)[1] <- "ReversedLat"
+
+RankedLong <- data.frame(DistinctLong, rank(DistinctLong))
+colnames(RankedLong)[1] <- "ReversedLong"
+
+#Join back into TaxiPickupSummary table
+TaxiPickupSummary <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
+TaxiPickupSummary <- merge(TaxiPickupSummary, RankedLong, by = "ReversedLong")
+colnames(TaxiPickupSummary)[101] <- "RankLat" # update value to different column if prior dummies not used
+colnames(TaxiPickupSummary)[102] <- "RankLong"# update value to different column if prior dummies not used
 
 # Set seed so that same training/test set is used on each run
 set.seed(1)
@@ -100,13 +129,3 @@ TaxiTest$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Hou
 TaxiTest$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_HalfHour,
                                                           max(TaxiTest$Num_Jrnys_Prev_HalfHour),
                                                           min(TaxiTest$Num_Jrnys_Prev_HalfHour))
-
-
-
-
-
-# include in latitude and longitude information relevative to the geohashes
-#TaxiTrain$ReversedLat <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lat
-#TaxiTrain$ReversedLong <- gh_decode(as.character(TaxiTrain$pickup_Geohash))$lng
-#TaxiTest$ReversedLat <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lat
-#TaxiTest$ReversedLong <- gh_decode(as.character(TaxiTest$pickup_Geohash))$lng
