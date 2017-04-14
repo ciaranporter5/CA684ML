@@ -61,7 +61,7 @@ TaxiTrain <- subset(TaxiData2, TaxiSplit == TRUE)
 TaxiTest <- subset(TaxiData2, TaxiSplit == FALSE)
 
 
-Taxi_fit <- randomForest(as.factor(TaxiTrain$pickup_level) ~ Month + Week_Day + TimeInterval + RankLat + RankLong + Temp + Precip,
+Taxi_fit <- randomForest(as.factor(TaxiTrain$pickup_level) ~ Month + Week_Day + TimeInterval + RankLat + RankLong + Temp + Conditions,
                     data=TaxiTrain, 
                     importance=TRUE, 
                     ntree=10)
@@ -72,14 +72,22 @@ print(Taxi_fit)
 print(importance(Taxi_fit,type = 2)) 
 
 #test predictions
-Taxi_fit_predict <- predict(Taxi_fit,TaxiTest[,-5])
-
-#test predictions
 taxi_model_pred <- predict(Taxi_fit, newdata = TaxiTest)
 table(taxi_model_pred, TaxiTest$pickup_level)
 
 #fraction of correct predictions
 mean(taxi_model_pred==TaxiTest$pickup_level)
 
+#Month +  Weekday + Time Intevral + Location
+#(107760 + 23829 + 50062 + 83233) / nrow(TaxiTest)
+
+#Month +  Weekday + Time Intevral + Location +  Temp + Precip
+#(106455 + 21013 + 53564+ 83544)/nrow(TaxiTest)
+
+#Month +  Weekday + Time Intevral + Location +  Temp + Humidity
+#(105755 + 24169 + 51965 + 83675)/nrow(TaxiTest)
+
+#Month +  Weekday + Time Intevral + Location +  Temp + Conditions
+#(105755 + 24169 + 51965 + 83675)/nrow(TaxiTest)
 
 summary(TaxiTrain$pickup_level)
