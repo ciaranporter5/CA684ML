@@ -3,15 +3,15 @@
 library(e1071)
 library(caTools)
 
-# adjust to use 3M sample due to memory consumption of full population
+# adjust to 1 month training/test split due to long run time
 # Split into training and test data based off of split Boolean Vector
-TaxiPickupSummary3M <- subset(TaxiPickupSummary,Month == "January"|
-                              Month == "February" |Month == "March")
+TaxiPickupSummary1M <- subset(TaxiPickupSummary,Month == "January")
+
 set.seed(3)
-TaxiPickupSummary3M$TaxiSplit <- sample.split(
-  TaxiPickupSummary3M$Num_Jrnys, SplitRatio = 0.70)
-TaxiTrain <- subset(TaxiPickupSummary3M, TaxiSplit == TRUE)
-TaxiTest <- subset(TaxiPickupSummary3M, TaxiSplit == FALSE)
+TaxiPickupSummary1M$TaxiSplit <- sample.split(
+  TaxiPickupSummary1M$Num_Jrnys, SplitRatio = 0.70)
+TaxiTrain <- subset(TaxiPickupSummary1M, TaxiSplit == TRUE)
+TaxiTest <- subset(TaxiPickupSummary1M, TaxiSplit == FALSE)
 
 # write function that scales data to 0-1 range
 minMaxScaling <- function(original, max, min){
@@ -27,32 +27,59 @@ minMaxDescaling <- function(scaled, max, min){
 TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, max(TaxiTrain$Num_Jrnys),
                                             min(TaxiTrain$Num_Jrnys))
 
-TaxiTrain$total_passenger_count_Scaled <- minMaxScaling(TaxiTrain$total_passenger_count,
-                                                        max(TaxiTrain$total_passenger_count),
-                                                        min(TaxiTrain$total_passenger_count))
+TaxiTrain$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Day, 
+                                                     max(TaxiTrain$Num_Jrnys_Prev_Day),
+                                                     min(TaxiTrain$Num_Jrnys_Prev_Day))
 
-TaxiTrain$total_fare_Scaled <- minMaxScaling(TaxiTrain$total_fare, max(TaxiTrain$total_fare),
-                                             min(TaxiTrain$total_fare))
+TaxiTrain$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Week, 
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Week),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Week))
+
+TaxiTrain$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Hour,
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Hour),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Hour))
+
+TaxiTrain$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_HalfHour,
+                                                          max(TaxiTrain$Num_Jrnys_Prev_HalfHour),
+                                                          min(TaxiTrain$Num_Jrnys_Prev_HalfHour))
 
 # scale the continuous variables in the test dataset (values between 0-1)
 TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, max(TaxiTest$Num_Jrnys),
                                            min(TaxiTest$Num_Jrnys))
 
-TaxiTest$total_passenger_count_Scaled <- minMaxScaling(TaxiTest$total_passenger_count,
-                                                       max(TaxiTest$total_passenger_count),
-                                                       min(TaxiTest$total_passenger_count))
+TaxiTest$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Day, 
+                                                    max(TaxiTest$Num_Jrnys_Prev_Day),
+                                                    min(TaxiTest$Num_Jrnys_Prev_Day))
 
-TaxiTest$total_fare_Scaled <- minMaxScaling(TaxiTest$total_fare, max(TaxiTest$total_fare),
-                                            min(TaxiTest$total_fare))
+TaxiTest$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Week, 
+                                                     max(TaxiTest$Num_Jrnys_Prev_Week),
+                                                     min(TaxiTest$Num_Jrnys_Prev_Week))
 
-# Fitting SVM model to training data
+TaxiTest$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Hour,
+                                                     max(TaxiTest$Num_Jrnys_Prev_Hour),
+                                                     min(TaxiTest$Num_Jrnys_Prev_Hour))
+
+TaxiTest$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_HalfHour,
+                                                         max(TaxiTest$Num_Jrnys_Prev_HalfHour),
+                                                         min(TaxiTest$Num_Jrnys_Prev_HalfHour))
+
+# Fitting model to training data
 set.seed(4)
-TaxiSVM <-svm(TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)], TaxiTrain[69],
-              type = "eps-regression", kernel = "radial", scale = FALSE)
+
+TaxiSVM <-svm(
+  TaxiTrain[c(17,25,27,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
+              56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
+              80,81,82,83,84,85,86,87,101,102,105,106,107,108)],
+              TaxiTrain$Num_Jrnys_Scaled, type = "eps-regression", 
+              kernel = "linear", scale = FALSE)
 
 # 1. Checks Made on Training Data
 # predict on test data and compare results
-TaxiSVMPredict <- predict(TaxiSVM,TaxiTrain[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiSVMPredict <- 
+  predict(TaxiSVM,
+          TaxiTrain[c(17,25,27,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
+                      56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
+                      80,81,82,83,84,85,86,87,101,102,105,106,107,108)])
 TaxiSVMPredict_DF<- data.frame(TaxiSVMPredict)
 
 # descale the predictions and show inital outputs
@@ -75,7 +102,11 @@ taxi.svm_mae
 
 # 2. Checks Made on Test Data
 # predict on test data and compare results
-TaxiSVMPredict <- predict(TaxiSVM,TaxiTest[-c(1,2,3,5,6,7,8,9,68,69)])
+TaxiSVMPredict <- 
+  predict(TaxiSVM,
+          TaxiTest[c(17,25,27,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,
+                     56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,
+                     80,81,82,83,84,85,86,87,101,102,105,106,107,108)])
 TaxiSVMPredict_DF<- data.frame(TaxiSVMPredict)
 
 # descale the predictions and show inital outputs
@@ -96,7 +127,6 @@ taxi.svm_rmse
 taxi.svm_mae <- mean(abs(TaxiSVMPredict_DF$Descaled--TaxiTest$Num_Jrnys))
 taxi.svm_mae
 
-# Ouptut Predicted Results
 taxi.svm_predicted <- data.frame(TaxiTest$pickup_Geohash, TaxiTest$pickupDate,
                                  TaxiTest$TimeInterval,TaxiTest$Num_Jrnys,
                                  TaxiSVMPredict_DF$Descaled,
@@ -105,5 +135,4 @@ taxi.svm_predicted <- data.frame(TaxiTest$pickup_Geohash, TaxiTest$pickupDate,
                                        TaxiTest$Num_Jrnys))
 colnames(taxi.svm_predicted) <- c("Geohash","Date", "Time", "Original", 
                                   "Predicted", "Difference", "Perc Diff")
-# write predicted output to csv file
 write.csv(taxi.svm_predicted, file = "TaxiSVMPredicted.csv", row.names = FALSE)
