@@ -1,6 +1,6 @@
-#install.packages('randomForest')
-#install.pacakges("geohash")
-#install.packages("caTools")
+install.packages('randomForest')
+install.pacakges("geohash")
+install.packages("caTools")
 
 library(randomForest)
 library(geohash)
@@ -20,25 +20,19 @@ TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
 #make model reproducible
 set.seed(415)
 
-# Convert the number of journeys to a categorical variable
-TaxiPickupSummary$pickup_level <- with(TaxiPickupSummary, cut(Num_Jrnys, 
-                                                              breaks=unique(quantile(Num_Jrnys, probs=seq(0,1, by=0.25)), na.rm=TRUE), 
-                                                              include.lowest=TRUE, labels = c("low","medium","high","very-high")))
 
 #include in latitude and longitude information relevative to the geohashes
 TaxiPickupSummary$ReversedLat <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lat
 TaxiPickupSummary$ReversedLong <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lng
 
+
 #Extract the unique lats and longs
 DistinctLat <- unique(TaxiPickupSummary$ReversedLat) 
 DistinctLong <-unique(TaxiPickupSummary$ReversedLong)
 
-#View(DistinctLat)
-#View(DistinctLong)
-
 #check lengths of distinct lats and long to ensure counts are less than 53
-#length(DistinctLat)
-#length(DistinctLong)
+length(DistinctLat)
+length(DistinctLong)
 
 #Rank by lat descending and long ascending
 RankedLat <- data.frame(DistinctLat, rank(-DistinctLat))
@@ -51,20 +45,52 @@ colnames(RankedLong)[1] <- "ReversedLong"
 #Join back into TaxiPickupSummary table
 TaxiData1 <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
 TaxiData2 <- merge(TaxiData1, RankedLong, by = "ReversedLong")
-colnames(TaxiData2)[31] <- "RankLat"
-colnames(TaxiData2)[32] <- "RankLong"
+colnames(TaxiData2)[30] <- "RankLat"
+colnames(TaxiData2)[31] <- "RankLong"
 
 # Split into training and test data based off of split Boolean Vector
 TaxiData2$TaxiSplit <- sample.split(
   TaxiData2$Num_Jrnys, SplitRatio = 0.70)
-TaxiTrain <- subset(TaxiData2, TaxiSplit == TRUE)
 TaxiTest <- subset(TaxiData2, TaxiSplit == FALSE)
+TaxiTrain <- subset(TaxiData2, TaxiSplit == TRUE)
 
 
-Taxi_fit <- randomForest(as.factor(TaxiTrain$pickup_level) ~ Month + Week_Day + TimeInterval + RankLat + RankLong + Temp + Conditions,
-                    data=TaxiTrain, 
-                    importance=TRUE, 
-                    ntree=10)
+# Baseline model - predict the mean of the training data
+#best guess for the number of Journeys in the absence of any predictors
+best.guess <- mean(TaxiTest$Num_Jrnys) 
+
+# Evaluate RMSE and MAE on the testing data
+RMSE.baseline <- sqrt(mean((best.guess-TaxiTest$Num_Jrnys)^2))
+RMSE.baseline
+#gives 85.39
+
+MAE.baseline <- mean(abs(best.guess-TaxiTest$Num_Jrnys))
+MAE.baseline
+#gives 58.59
+
+#Convert some factor variables to numeric (train and test sets)
+TaxiTrain$Num_Jrnys <- as.numeric(TaxiTrain$Num_Jrnys)
+TaxiTest$Num_Jrnys <- as.numeric(TaxiTest$Num_Jrnys)
+TaxiTrain$Num_Jrnys_Prev_Week <- as.numeric(TaxiTrain$Num_Jrnys_Prev_Week)
+TaxiTest$Num_Jrnys_Prev_Week <- as.numeric(TaxiTest$Num_Jrnys_Prev_Week)
+TaxiTrain$Temp <- as.numeric(TaxiTrain$Temp)
+TaxiTest$Temp <- as.numeric(TaxiTest$Temp)
+TaxiTrain$Humidity <- as.numeric(TaxiTrain$Humidity)
+TaxiTest$Humidity <- as.numeric(TaxiTest$Humidity)
+TaxiTrain$Wind_Speed <- as.numeric(TaxiTrain$Wind_Speed)
+TaxiTest$Wind_Speed <- as.numeric(TaxiTest$Wind_Speed)
+
+#There is no need to one-hot encode categorical variables as the R library
+#for Random Forest can support categorical variables
+
+# Create a random forest with 50 trees
+# This low number of trees is chosen due to computational constraints
+Taxi_fit <- randomForest(Num_Jrnys ~ Month + Week_Day + 
+                           TimeInterval + RankLat + RankLong + Temp + Conditions +
+                           Precip + Humidity + Num_Jrnys_Prev_Week,
+                         data=TaxiTrain, 
+                         importance=TRUE, 
+                         ntree=50)
 
 print(Taxi_fit)
 
@@ -73,21 +99,14 @@ print(importance(Taxi_fit,type = 2))
 
 #test predictions
 taxi_model_pred <- predict(Taxi_fit, newdata = TaxiTest)
-table(taxi_model_pred, TaxiTest$pickup_level)
+table(taxi_model_pred, TaxiTest$Num_Jrnys)
 
-#fraction of correct predictions
-mean(taxi_model_pred==TaxiTest$pickup_level)
+RMSE.forest <- sqrt(mean((taxi_model_pred -TaxiTest$Num_Jrnys)^2))
+RMSE.forest
 
-#Month +  Weekday + Time Intevral + Location
-#(107760 + 23829 + 50062 + 83233) / nrow(TaxiTest)
 
-#Month +  Weekday + Time Intevral + Location +  Temp + Precip
-#(106455 + 21013 + 53564+ 83544)/nrow(TaxiTest)
+MAE.forest <- mean(abs(taxi_model_pred -TaxiTest$Num_Jrnys))
+MAE.forest
 
-#Month +  Weekday + Time Intevral + Location +  Temp + Humidity
-#(105755 + 24169 + 51965 + 83675)/nrow(TaxiTest)
-
-#Month +  Weekday + Time Intevral + Location +  Temp + Conditions
-#(105755 + 24169 + 51965 + 83675)/nrow(TaxiTest)
 
 summary(TaxiTrain$pickup_level)
