@@ -27,13 +27,26 @@ Derives the geohashes for distinct pickup latitudes and longitudes using the <i>
 This script loads the final data set after all required cleansing, imputation and transformations have been made. Indicator variables are added to assist with categorical data, scaling is applied to the density variables, and the geohash features are given numeric ranked values so they can be placed in an ordered list as inputs.
 
 Main
-1. Neural Network
+1. Linear Regression
+
 -- some detail in here
 
-2. Support Vector Machine
+2. Naive Bayes
+
 -- some detail in here
 
-3. Naive Bayes
+3. TaxiPickupNN.R
+
+Execution of neural networks on training and test data. Highlights features and parameters used for prediction, and tests the accuracy of the model using the Root Mean Squared Error (RMSE) and the Mean Absolute Error (MAE).
+
+4. TaxiPickupSVM.R
+
+Execution of support vector machines on training and test data for a one month sample. Highlights features and parameters used for prediction, and tests the accuracy of the model using the Root Mean Squared Error (RMSE) and the Mean Absolute Error (MAE).
+
+5. Decision Tree
+
 -- some detail in here
 
-etc
+6. Random Forest
+
+-- some detail in here
