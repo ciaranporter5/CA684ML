@@ -1,4 +1,5 @@
-CA684 Machine Learning Repository
+<b>CA684 Machine Learning Repository</b>
+
 This page acts as a Repository for Machine Learning Taxi Assignment
 
 All source code used as part of data cleaning and testing of the various models is included here.
