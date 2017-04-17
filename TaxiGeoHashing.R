@@ -59,6 +59,13 @@ write.csv(TaxiPickupsRetain,file = "TaxiPickupsRetain.csv", row.names = FALSE)
 leaflet(data = map_decoded) %>% addProviderTiles('Esri') %>%
   addMarkers(~lng, ~lat, popup = map_decoded$geohash)
 
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lng1=gh_decode('dr73')$lng, lat1=gh_decode('dr73')$lat,
+    lng2=gh_decode('dr5w')$lng, lat2=gh_decode('dr5w')$lat,
+    fillColor = "transparent"
+  )
+
 # plot on map using leaflet library
 leaflet(data = taxi_decodedP3) %>% addTiles() %>%
   addMarkers(~lng, ~lat, 
