@@ -1,5 +1,6 @@
-
+#Set the working directory
 setwd("C:/Users/Maeve/Documents/MCM/ML_Test")
+
 #install.packages("e1071")
 #install.packages("caTools")
 #install.packages ("plyr")
@@ -49,8 +50,9 @@ ks.test(TaxiPickupSummary$Wind_Speed, "pnorm", mean(TaxiPickupSummary$Wind_Speed
 ks.test(TaxiPickupSummary$Humidity, "pnorm", mean(TaxiPickupSummary$Humidity),
         sd(TaxiPickupSummary$Humidity))
 
-
+# Above tests indicated that continuous variables are non-Gaussian
 # Convert the continuous variables to a categorical variables
+
 TaxiPickupSummary$pickup_level <- with(TaxiPickupSummary, cut(Num_Jrnys, 
                                   breaks=unique(quantile(Num_Jrnys, probs=seq(0,1, by=0.25)), na.rm=TRUE), 
                                   include.lowest=TRUE, labels = c("low","medium","high","very-high")))
@@ -90,14 +92,15 @@ table(TaxiPickupSummary$Humidity_Level)
 
 
 
-#2. Independence of categorical features
+#2. Check Independence of categorical features
 
-#Extract Categorical Variables
+#Extract Categorical Variables from main data frame
 CatVariables <- TaxiPickupSummary[,c(1,2,3,5,27,29,30,31,32,33)]
 
 
-#Chi square test for independence
+#Chi square test for independence - this will generate a matrix of results showing all combinations of categorical variables
 #Null hypothesis - variables are independent given the pickup level
+
 combos <- combn(ncol( CatVariables),2)
 
 adply(combos, 2, function(x) {
@@ -119,6 +122,7 @@ adply(combos, 2, function(x) {
   TaxiTrain = subset(TaxiPickupSummary, TaxiSplit == TRUE)
   TaxiTest = subset(TaxiPickupSummary, TaxiSplit == FALSE)
   
+  #Generate tables for testing feature combinations
   #Table 1 = Weekday, Month, Time Interval, Pickup Geohash
   TaxiTable_train1 <- TaxiTrain[,c(2,3,5,6,28)]
   TaxiTable_test1 <- TaxiTest[,c(2,3,5,6,28)]
