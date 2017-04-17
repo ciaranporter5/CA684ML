@@ -8,7 +8,6 @@ library(caTools)
 library(rpart)
 library(rpart.plot)
 
-
 # read-in taxi data
 # commented out versions are old datasets
 #TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_v3.csv")
@@ -18,19 +17,16 @@ TaxiPickupSummary <- read.csv("Raw Data/Summarized_inc_weather_Final.csv")
 # brief summary of dataframe
 summary(TaxiPickupSummary)
 
-
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
 head(TaxiPickupSummary,1)
 
-
-# delete redundent columns from table that are not needed at predictors
+# delete redundent columns from table that are not needed as predictors
 TaxiPickupSummary$pickupDate <- NULL
 TaxiPickupSummary$total_passenger_count <- NULL
 TaxiPickupSummary$total_fare <- NULL
 # show first recorded of updated table
 head(TaxiPickupSummary,1)
-
 
 # include in latitude and longitude information relevative to the geohashes
 TaxiPickupSummary$ReversedLat <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lat
@@ -56,14 +52,12 @@ RankedLong <- data.frame(DistinctLong, rank(DistinctLong))
 colnames(RankedLong)[1] <- "ReversedLong"
 #View(RankedLong)
 
-
 # join back into TaxiPickupSummary table
 TaxiDataUpdated <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
 TaxiDataFinal <- merge(TaxiDataUpdated, RankedLong, by = "ReversedLong")
 # renameing column names 27 & 28 refer to cols being renamed
 colnames(TaxiDataFinal)[27] <- "RankLat"
 colnames(TaxiDataFinal)[28] <- "RankLong"
-
 
 # Set seed so that same training/test set is used on each run
 set.seed(9850)
@@ -134,11 +128,9 @@ TaxiTest$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev
                                                          min(TaxiTest$Num_Jrnys_Prev_HalfHour))
 
 
-
 # Deleting columns from test and training dataset that are not needed
 TaxiTest$TaxiSplit <- NULL
 TaxiTest$DAY <- NULL
-#TaxiTest$Num_Jrnys <- NULL
 TaxiTest$Num_Jrnys_Prev_Day <- NULL
 TaxiTest$Num_Jrnys_Prev_Week <- NULL
 TaxiTest$Num_Jrnys_Prev_Hour <- NULL
@@ -152,7 +144,6 @@ TaxiTrain$Num_Jrnys_Prev_HalfHour <- NULL
 
 # summary of training dataset to see fields for use in decesion tree
 summary(TaxiTrain)
-
 
 
 # grow the decision tree using Num_Jrnys_Scaled as the outcome/target All other variables are predictors in the tree.
@@ -186,13 +177,6 @@ taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ RankLat+RankLong+Num_Jrnys_Prev_Day_S
                           Num_Jrnys_Prev_HalfHour_Scaled+Temp+Wind_Speed+Precip+Conditions, 
                         TaxiTrain, method="anova")
 
-
-head(TaxiTest,1)
-#Week_Day Month TimeInterval pickup_Geohash RankLat RankLong Num_Jrnys Class 
-#Temp Heat_Index Windchill Dew_Point Humidity Pressure Visibility Wind_Dir 
-#Wind_Speed Gust_Speed Precip Events Conditions  
-#Num_Jrnys_Scaled Num_Jrnys_Prev_Day_Scaled
-#Num_Jrnys_Prev_Week_Scaled Num_Jrnys_Prev_Hour_Scaled Num_Jrnys_Prev_HalfHour_Scaled
 
 # shows what is in our tree. Gives idea how the tree structure is built, the legend of the trre, the number of observations, branches, where leave nodes are located etc.
 taxi_DT_model
@@ -231,7 +215,7 @@ pred$Descaled <- ifelse(minMaxDescaling(pred$pred, max(TaxiTest$Num_Jrnys),
 
 head(data.frame(TaxiTest$Num_Jrnys, pred$Descaled),100)
 
-# descale the predictions and show inital outputs
+# descale the predictions and show inital outputs for pruned data
 pred_prune$Descaled <- ifelse(minMaxDescaling(pred_prune$pred, max(TaxiTest$Num_Jrnys),
                                         min(TaxiTest$Num_Jrnys))>0,
                         minMaxDescaling(pred_prune$pred,
