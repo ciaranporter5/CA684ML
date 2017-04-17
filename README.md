@@ -31,9 +31,11 @@ Main
 
 -- some detail in here
 
-2. Naive Bayes
+2. Taxi.NaiveBayes.R
 
--- some detail in here
+Runs various tests required to determine whether feature variables are normally distributed, and applies conversion to Gaussian where necessary, as this is a pre-requisite for the Naive Bayes model. 
+
+Uses different combinations of feature variables to investigate which model gives the highest level of accuracy on the test dataset.
 
 3. TaxiPickupNN.R
 
@@ -43,10 +45,10 @@ Execution of neural networks on training and test data. Highlights features and 
 
 Execution of support vector machines on training and test data for a one month sample. Highlights features and parameters used for prediction, and tests the accuracy of the model using the Root Mean Squared Error (RMSE) and the Mean Absolute Error (MAE).
 
-5. Decision Tree
+5. Taxi.DecisionTree.R
 
--- some detail in here
+Uses the <i>rpart</i> library in R to derive decision trees on the Taxi dataset. Different combinations of features variables are tested, and different levels of pruning are applied to the trees to determine an optimum model. 
 
-6. Random Forest
+6. RandomForest.R
 
--- some detail in here
+Runs a random forest based of 50 distinct decision trees and estimates the significance of each feature used. As per usual, model error metrics such as Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) are performed on the outputted model.
