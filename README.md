@@ -29,7 +29,7 @@ This script loads the final data set after all required cleansing, imputation an
 Main
 1. TaxiLM.R
 
-Runs linear regression models on the Taxi dataset, and compares the impact of using different features on the RMSE and MAE.
+Runs linear regression models on the Taxi dataset, and compares the impact of using different features on the Root Mean Squared Error (RMSE) and the Mean Absolute Error (MAE).
 
 2. Taxi.NaiveBayes.R
 
