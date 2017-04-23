@@ -20,7 +20,9 @@ This script also combines the existing raw data with its corresponding geohashed
 
 Derives the geohashes for distinct pickup latitudes and longitudes using the <i>geohash</i> library in R. This is required so that pickups in similar locations can be grouped together.
 
-2. Imputation of weather data
+2. WeatherImputation.R
+
+This script loads the semi-cleaned weather data from Excel to impute missing values. These take 2 forms, records with no values and records with some missing values. First, records with all values missing have important fields, i.e. Temp and Dew Point imputed by Time Series method. Once complete all records should only be missing values across some fields. Random Forest imputation is used to complete these.
 
 3. TaxiPreProcessing.R
 
