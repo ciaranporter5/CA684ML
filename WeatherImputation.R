@@ -1,8 +1,10 @@
 #install.packages("readxl")
 #install.packages("UsingR")
+#install.packages("imputeTS")
 #install.packages("missForest")
 library(readxl)
 library(UsingR)
+library(imputeTS)
 library(missForest)
 
 #Set the working directory
@@ -16,7 +18,7 @@ summary(weather)
 densityplot(weather)
 sum(is.na(weather))
 
-#find missing values - Temporal imputation for records with no values
+#find missing values - Time Series imputation for records with no values
 pMiss <­ function(x){sum(is.na(x))/length(x)*100}
 apply(weather,1,pMiss)
 
