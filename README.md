@@ -27,9 +27,9 @@ Derives the geohashes for distinct pickup latitudes and longitudes using the <i>
 This script loads the final data set after all required cleansing, imputation and transformations have been made. Indicator variables are added to assist with categorical data, scaling is applied to the density variables, and the geohash features are given numeric ranked values so they can be placed in an ordered list as inputs.
 
 Main
-1. Linear Regression
+1. TaxiLM.R
 
--- some detail in here
+Runs linear regression models on the Taxi dataset, and compares the impact of using different features on the RMSE and MAE.
 
 2. Taxi.NaiveBayes.R
 
