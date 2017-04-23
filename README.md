@@ -51,4 +51,4 @@ Uses the <i>rpart</i> library in R to derive decision trees on the Taxi dataset.
 
 6. RandomForest.R
 
-Runs a random forest based of 50 distinct decision trees and estimates the significance of each feature used. As per usual, model error metrics such as Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) are performed on the outputted model.
+Runs a random forest based of 3 sets of 50 distinct decision trees which are combined together and estimates the significance of each feature used. As per usual, model error metrics such as Root Mean Squared Error (RMSE) and Mean Absolute Error (MAE) are performed on the outputted model.
