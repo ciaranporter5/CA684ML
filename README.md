@@ -28,7 +28,8 @@ This script loads the semi-cleaned weather data from Excel to impute missing val
 
 This script loads the final data set after all required cleansing, imputation and transformations have been made. Indicator variables are added to assist with categorical data, scaling is applied to the density variables, and the geohash features are given numeric ranked values so they can be placed in an ordered list as inputs.
 
-Main
+<b>Main</b>
+
 1. TaxiLM.R
 
 Runs linear regression models on the Taxi dataset, and compares the impact of using different features on the Root Mean Squared Error (RMSE) and the Mean Absolute Error (MAE).
