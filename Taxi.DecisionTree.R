@@ -1,48 +1,50 @@
-install.packages('randomForest')
-install.pacakges("geohash")
-install.packages("caTools")
-install.packages("rpart")
-install.packages("ggplot2")
+#install.pacakges("geohash")
+#install.packages("caTools")
+#install.packages("rpart")
+#install.packages("rpart.plot")
 
-
-library(randomForest)
 library(geohash)
 library(caTools)
 library(rpart)
-library(ggplot2)
-
-
-
-setwd("C:/Users/Maeve/Documents/MCM/ML_Test")
+library(rpart.plot)
 
 # read-in taxi data
-TaxiPickupSummary <- read.csv("Summarized_inc_weather_Final.csv")
+# commented out versions are old datasets
+#TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_v3.csv")
+#TaxiPickupSummary <- read.csv("Raw Data/Taxi_Summarized by pickup location_w_lags.csv")
+TaxiPickupSummary <- read.csv("Raw Data/Summarized_inc_weather_Final.csv")
 
-#random sample without replacement from table
-TaxiPickupSummary <- TaxiPickupSummary[sample(1:nrow(TaxiPickupSummary), 100000,
-                          replace=FALSE),]
+# brief summary of dataframe
 summary(TaxiPickupSummary)
 
 # remove blank geohashes - bad records/outside test range
 TaxiPickupSummary <- TaxiPickupSummary[TaxiPickupSummary$pickup_Geohash != "",]
+head(TaxiPickupSummary,1)
 
-#make model reproducible
-set.seed(415)
+# delete redundent columns from table that are not needed as predictors
+TaxiPickupSummary$pickupDate <- NULL
+TaxiPickupSummary$total_passenger_count <- NULL
+TaxiPickupSummary$total_fare <- NULL
+# show first recorded of updated table
+head(TaxiPickupSummary,1)
 
-
-#include in latitude and longitude information relevative to the geohashes - reverse geocode
+# include in latitude and longitude information relevative to the geohashes
 TaxiPickupSummary$ReversedLat <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lat
 TaxiPickupSummary$ReversedLong <- gh_decode(as.character(TaxiPickupSummary$pickup_Geohash))$lng
 
-#Extract the unique lats and longs
+# Extract the unique lats and longs
 DistinctLat <- unique(TaxiPickupSummary$ReversedLat) 
 DistinctLong <-unique(TaxiPickupSummary$ReversedLong)
 
-#check lengths of distinct lats and long to ensure counts are less than 53
-length(DistinctLat) #gives 36
-length(DistinctLong) # gives 24
+# view distinct lat & long
+View(DistinctLat)
+View(DistinctLong)
 
-#Rank by lat descending and long ascending
+# check lengths of distinct lats and long to ensure counts are less than 53
+length(DistinctLat)
+length(DistinctLong)
+
+# Rank by lat descending and long ascending
 RankedLat <- data.frame(DistinctLat, rank(-DistinctLat))
 colnames(RankedLat)[1] <- "ReversedLat"
 #View(RankedLat)
@@ -50,106 +52,191 @@ RankedLong <- data.frame(DistinctLong, rank(DistinctLong))
 colnames(RankedLong)[1] <- "ReversedLong"
 #View(RankedLong)
 
+# join back into TaxiPickupSummary table
+TaxiDataUpdated <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
+TaxiDataFinal <- merge(TaxiDataUpdated, RankedLong, by = "ReversedLong")
+# renameing column names 27 & 28 refer to cols being renamed
+colnames(TaxiDataFinal)[27] <- "RankLat"
+colnames(TaxiDataFinal)[28] <- "RankLong"
 
-
-#Join back into TaxiPickupSummary table
-TaxiData1 <- merge(TaxiPickupSummary, RankedLat, by = "ReversedLat")
-TaxiData2 <- merge(TaxiData1, RankedLong, by = "ReversedLong")
-colnames(TaxiData2)[33] <- "RankLat"
-colnames(TaxiData2)[34] <- "RankLong"
-
+# Set seed so that same training/test set is used on each run
+set.seed(9850)
 
 # Split into training and test data based off of split Boolean Vector
-TaxiData2$TaxiSplit <- sample.split(
-  TaxiData2$Num_Jrnys, SplitRatio = 0.70)
-TaxiTest <- subset(TaxiData2, TaxiSplit == FALSE)
-TaxiTrain <- subset(TaxiData2, TaxiSplit == TRUE)
+TaxiDataFinal$TaxiSplit = sample.split(
+  TaxiDataFinal$Num_Jrnys, SplitRatio = 0.70)
+TaxiTrain = subset(TaxiDataFinal, TaxiSplit == TRUE)
+TaxiTest = subset(TaxiDataFinal, TaxiSplit == FALSE)
 
-# Baseline model - predict the mean of the training data
-#best guess for the number of Journeys in the absence of any predictors
-best.guess <- mean(TaxiTest$Num_Jrnys) 
+# checking record count to see if split was accurate
+dim(TaxiDataFinal)
+dim(TaxiTrain)
+dim(TaxiTest)
+summary(TaxiDataFinal,1)
+summary(TaxiTrain,1)
 
-# Evaluate RMSE and MAE on the testing data
-RMSE.baseline <- sqrt(mean((best.guess-TaxiTest$Num_Jrnys)^2))
-RMSE.baseline
-#gives 85.39
+# write function that scales data to 0-1 range
+minMaxScaling <- function(original, max, min){
+  (original - min)/(max - min)
+}
 
-MAE.baseline <- mean(abs(best.guess-TaxiTest$Num_Jrnys))
-MAE.baseline
-#gives 58.59
+# write function to bring back to original for comparing outputs
+minMaxDescaling <- function(scaled, max, min){
+  ((scaled*(max-min)) + min)
+}
 
+# scale the number of journeys (including lags) in the training dataset (values between 0-1)
+TaxiTrain$Num_Jrnys_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys, 
+                                            max(TaxiTrain$Num_Jrnys),
+                                            min(TaxiTrain$Num_Jrnys))
 
-#Convert some factor variables to numeric (train and test sets)
-TaxiTrain$Temp <- as.numeric(TaxiTrain$Temp)
-TaxiTest$Temp <- as.numeric(TaxiTest$Temp)
-TaxiTrain$Humidity <- as.numeric(TaxiTrain$Humidity)
-TaxiTest$Humidity <- as.numeric(TaxiTest$Humidity)
-TaxiTrain$Wind_Speed <- as.numeric(TaxiTrain$Wind_Speed)
-TaxiTest$Wind_Speed <- as.numeric(TaxiTest$Wind_Speed)
+TaxiTrain$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Day, 
+                                                     max(TaxiTrain$Num_Jrnys_Prev_Day),
+                                                     min(TaxiTrain$Num_Jrnys_Prev_Day))
 
-#There is no need to one-hot encode categorical variables as the R library
-#for Random Forest can support categorical variables
+TaxiTrain$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Week, 
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Week),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Week))
 
-# Regression Problem
-# Create a random forest with 50 trees
-# Update the model using different combinations of variables, run and record results
-Taxi_fit_R1 <- randomForest(Num_Jrnys ~ Month + Week_Day + 
-                              TimeInterval + RankLat + RankLong + Temp + Precip + Humidity,
-                         data=TaxiTrain, 
-                         importance=TRUE, 
-                         ntree=50)
+TaxiTrain$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_Hour,
+                                                      max(TaxiTrain$Num_Jrnys_Prev_Hour),
+                                                      min(TaxiTrain$Num_Jrnys_Prev_Hour))
 
-Taxi_fit_R2 <- randomForest(Num_Jrnys ~ Month + Week_Day + 
-                              TimeInterval + RankLat + RankLong + Temp + Precip + Humidity,
-                          data=TaxiTrain, 
-                          importance=TRUE, 
-                          ntree=50)
+TaxiTrain$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTrain$Num_Jrnys_Prev_HalfHour,
+                                                          max(TaxiTrain$Num_Jrnys_Prev_HalfHour),
+                                                          min(TaxiTrain$Num_Jrnys_Prev_HalfHour))
 
-Taxi_fit_R3 <- randomForest(Num_Jrnys ~ Month + Week_Day + 
-                              TimeInterval + RankLat + RankLong + Temp + Precip + Humidity,
-                           data=TaxiTrain, 
-                           importance=TRUE, 
-                           ntree=50)
+# scale the number of journeys (including lags) in the test dataset (values between 0-1)
+TaxiTest$Num_Jrnys_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys, 
+                                           max(TaxiTest$Num_Jrnys),
+                                           min(TaxiTest$Num_Jrnys))
 
-#Combine seperate models for a better prediction
-Taxi_fit_R <- combine(Taxi_fit_R1, Taxi_fit_R2, Taxi_fit_R3)
+TaxiTest$Num_Jrnys_Prev_Day_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Day, 
+                                                    max(TaxiTest$Num_Jrnys_Prev_Day),
+                                                    min(TaxiTest$Num_Jrnys_Prev_Day))
 
-print(Taxi_fit_R)
+TaxiTest$Num_Jrnys_Prev_Week_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Week, 
+                                                     max(TaxiTest$Num_Jrnys_Prev_Week),
+                                                     min(TaxiTest$Num_Jrnys_Prev_Week))
 
-# How many trees are needed to reach the minimum error estimate? 
-R1_min <- which.min(Taxi_fit_R1$mse)
-R2_min <- which.min(Taxi_fit_R2$mse)
-R3_min <- which.min(Taxi_fit_R3$mse)
+TaxiTest$Num_Jrnys_Prev_Hour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_Hour,
+                                                     max(TaxiTest$Num_Jrnys_Prev_Hour),
+                                                     min(TaxiTest$Num_Jrnys_Prev_Hour))
 
-#Generate importance matrix
-imp <- as.data.frame(sort(importance(Taxi_fit_R)[,1],decreasing = TRUE),optional = T)
-names(imp) <- "% Inc MSE"
-imp
-
-# Predict and evaluate on the test set
-taxi_model_pred_R <- predict(Taxi_fit_R,TaxiTest)
-
-#Generate root mean square error
-RMSE.taxi_model_R <- sqrt(mean((taxi_model_pred_R-TaxiTest$Num_Jrnys)^2))
-RMSE.taxi_model_R
-
-#Generate mean absolute error
-MAE.taxi_model_R <- mean(abs(taxi_model_pred_R-TaxiTest$Num_Jrnys))
-MAE.taxi_model_R
+TaxiTest$Num_Jrnys_Prev_HalfHour_Scaled <- minMaxScaling(TaxiTest$Num_Jrnys_Prev_HalfHour,
+                                                         max(TaxiTest$Num_Jrnys_Prev_HalfHour),
+                                                         min(TaxiTest$Num_Jrnys_Prev_HalfHour))
 
 
-#Generate plot of actual versus predicted
-actual <- TaxiTest$Num_Jrnys
-predicted <- taxi_model_pred_R
-result<-data.frame(actual=actual,predicted=predicted)
-paste('Function Call: ', Taxi_fit_R$call)
+# Deleting columns from test and training dataset that are not needed
+TaxiTest$TaxiSplit <- NULL
+TaxiTest$DAY <- NULL
+TaxiTest$Num_Jrnys_Prev_Day <- NULL
+TaxiTest$Num_Jrnys_Prev_Week <- NULL
+TaxiTest$Num_Jrnys_Prev_Hour <- NULL
+TaxiTest$Num_Jrnys_Prev_HalfHour <- NULL
+TaxiTrain$TaxiSplit <- NULL
+TaxiTrain$DAY <- NULL
+TaxiTrain$Num_Jrnys_Prev_Day <- NULL
+TaxiTrain$Num_Jrnys_Prev_Week <- NULL
+TaxiTrain$Num_Jrnys_Prev_Hour <- NULL
+TaxiTrain$Num_Jrnys_Prev_HalfHour <- NULL
 
-ggplot(result)+
-  geom_point(aes(x=actual,y=predicted,color=predicted-actual),alpha=0.7)+
-  ggtitle('Plotting Error')
+# summary of training dataset to see fields for use in decesion tree
+summary(TaxiTrain)
 
-#choose a tree from he randomforest to understand results
-Sample <- getTree(Taxi_fit_R, k=1, labelVar=TRUE)
-Sample
 
-plot(Sample, compress = TRUE)
+# grow the decision tree using Num_Jrnys_Scaled as the outcome/target All other variables are predictors in the tree.
+# anova is specified when we want to use a regression tree/when our target is numerical
+
+# first model we produced using pickup_Geohash instead of lat & long
+taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ Week_Day+Month+TimeInterval+
+                          pickup_Geohash+Temp+Wind_Speed+Precip+Conditions,
+                        TaxiTrain, method="anova")
+
+# second model we produced using lat & long instead of pickup_Geo_Hash
+taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ Week_Day+Month+TimeInterval+
+                          RankLat+RankLong+Temp+Wind_Speed+Precip+Conditions, 
+                        TaxiTrain, method="anova")
+
+# third model we produced using pickup_Geohash instead of lat & long with only previous journy info and no weather data
+taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ pickup_Geohash+Num_Jrnys_Prev_Day_Scaled+
+                          Num_Jrnys_Prev_Week_Scaled+Num_Jrnys_Prev_Hour_Scaled+
+                          Num_Jrnys_Prev_HalfHour_Scaled, 
+                        TaxiTrain, method="anova")
+
+# fourth model we produced using lat & long instead of pickup_GEOhash with with weather data and prev week data
+taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ Month+Week_Day+TimeInterval+
+                          RankLat+RankLong+Temp+Conditions+Precip+Humidity+
+                          Num_Jrnys_Prev_Week_Scaled,
+                        TaxiTrain, method="anova")
+
+# fifth model we produced using lat & long with previous journey info and weather data
+taxi_DT_model <- rpart (Num_Jrnys_Scaled ~ RankLat+RankLong+Num_Jrnys_Prev_Day_Scaled+
+                          Num_Jrnys_Prev_Week_Scaled+Num_Jrnys_Prev_Hour_Scaled+
+                          Num_Jrnys_Prev_HalfHour_Scaled+Temp+Wind_Speed+Precip+Conditions, 
+                        TaxiTrain, method="anova")
+
+
+# shows what is in our tree. Gives idea how the tree structure is built, the legend of the trre, the number of observations, branches, where leave nodes are located etc.
+taxi_DT_model
+
+# draws decision tree with text. Gives good visualisations for conditions used. Shows primary conditions etc
+# type of 4 labels all nodes in the tree, extra of 101 displays % of nodes that fall in a that class
+# some models are better suited when no type or extras are specified
+rpart.plot(taxi_DT_model, type=4, extra=101)
+rpart.plot(taxi_DT_model, type=4)
+rpart.plot(taxi_DT_model, extra=101)
+rpart.plot(taxi_DT_model)
+
+# plotting the overall complexity parameters and then pruning out the tree to get best fit
+printcp(taxi_DT_model)
+plotcp(taxi_DT_model)
+taxi_DT_model_prune <-prune.rpart(taxi_DT_model, cp=0.07)
+taxi_DT_model_prune
+printcp(taxi_DT_model_prune)
+plotcp(taxi_DT_model_prune)
+
+# get predicted from test data set using pruned & unpruned models
+pred <- predict(taxi_DT_model, TaxiTest)
+pred <- data.frame(pred)
+pred_prune <- predict(taxi_DT_model_prune, TaxiTest)
+pred_prune <- data.frame(pred_prune)
+
+summary(pred)
+summary(pred_prune)
+
+# descale the predictions and show inital outputs
+pred$Descaled <- ifelse(minMaxDescaling(pred$pred, max(TaxiTest$Num_Jrnys),
+                                        min(TaxiTest$Num_Jrnys))>0,
+                        minMaxDescaling(pred$pred,
+                                        max(TaxiTest$Num_Jrnys),
+                                        min(TaxiTest$Num_Jrnys)),0)
+
+head(data.frame(TaxiTest$Num_Jrnys, pred$Descaled),100)
+
+# descale the predictions and show inital outputs for pruned data
+pred_prune$Descaled <- ifelse(minMaxDescaling(pred_prune$pred, max(TaxiTest$Num_Jrnys),
+                                        min(TaxiTest$Num_Jrnys))>0,
+                        minMaxDescaling(pred_prune$pred,
+                                        max(TaxiTest$Num_Jrnys),
+                                        min(TaxiTest$Num_Jrnys)),0)
+
+head(data.frame(TaxiTest$Num_Jrnys, pred_prune$Descaled),100)
+
+
+# calculate RMSE on scaled data which is has not been pruned
+taxi.nn_rmse <- sqrt(mean((pred$Descaled-TaxiTest$Num_Jrnys)^2))
+taxi.nn_rmse
+
+# calculate RMSE on scaled data which has been pruned
+taxi.nn_rmse <- sqrt(mean((pred_prune$Descaled-TaxiTest$Num_Jrnys)^2))
+taxi.nn_rmse
+
+# calculate Mean Absolute Error on scaled data which is has not been pruned
+taxi.nn_mae <- mean(abs(pred$Descaled-TaxiTest$Num_Jrnys))
+taxi.nn_mae
+
+# calculate Mean Absolute Error on scaled data which has been pruned
+taxi.nn_mae <- mean(abs(pred_prune$Descaled-TaxiTest$Num_Jrnys))
+taxi.nn_mae
