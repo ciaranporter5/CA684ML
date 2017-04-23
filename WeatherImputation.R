@@ -17,7 +17,7 @@ densityplot(weather)
 sum(is.na(weather))
 
 #find missing values - Temporal imputation for records with no values
-pMiss <­ function(x){sum(is.na(x))/length(x)*100}
+pMiss <Â­ function(x){sum(is.na(x))/length(x)*100}
 apply(weather,1,pMiss)
 
 #find missing values - Random Forest imputation for missing records with some values
