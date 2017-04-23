@@ -134,6 +134,9 @@ TaxiTrain$Pred_Num_Jrnys <- predict(fit,
 TaxiTest$Pred_Num_Jrnys <- predict(fit, 
     newdata = TaxiTest)
 
+# See output of the Linear Regression model and the main components of it
+summary(fit)
+
 # Check how well the model performs on the training set - correlation^2, RMSE and MAE
 train.corr <- cor(TaxiTrain$Pred_Num_Jrnys, TaxiTrain$Num_Jrnys)
 train.RMSE <- sqrt(mean((TaxiTrain$Pred_Num_Jrnys - TaxiTrain$Num_Jrnys)^2))
